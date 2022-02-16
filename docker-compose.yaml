@@ -1,0 +1,11 @@
+version: "3.4"
+
+services:
+  develop:
+    image: registry.23alice.duckdns.org/friday:latest
+    build:
+      context: ./
+      dockerfile: dockerfiles/Dockerfile
+      network: host
+      args:
+        - TARGET=develop
