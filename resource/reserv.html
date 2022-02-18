@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <link href="/mrs/resources/bootstrap/3.3.4/css/bootstrap.min.css" rel="stylesheet" />
+    <link href="/mrs/resources/font-awesome/4.3.0/css/font-awesome.min.css" rel="stylesheet" />
+    <link href="/mrs/resources/bootstrap-select/1.6.3/css/bootstrap-select.min.css" rel="stylesheet" />
+    <link href="/mrs/resources/bootstrap-table/1.8.0/bootstrap-table.min.css" rel="stylesheet" />
+    <link href="/mrs/resources/bootstrap3-dialog/1.34.4/css/bootstrap-dialog.min.css" rel="stylesheet" />
+    <link href="/mrs/resources/bootstrap-tagsinput/0.5.0/bootstrap-tagsinput.css" rel="stylesheet" />
+    <link
+      href="/mrs/resources/bootstrap-datetimepicker/4.14.30/css/bootstrap-datetimepicker.min.css"
+      rel="stylesheet"
+    />
+    <link href="/mrs/resources/bootstrap-fileinput/4.2.7/css/fileinput.min.css" rel="stylesheet" />
+    <link href="/mrs/resources/summernote/0.6.16/summernote.css" rel="stylesheet" />
+
+    <script src="/mrs/resources/jquery/2.1.4/jquery.min.js"></script>
+    <script src="/mrs/resources/bootstrap/3.3.4/js/bootstrap.min.js"></script>
+    <script src="/mrs/resources/bootstrap-select/1.6.3/js/bootstrap-select.min.js"></script>
+    <script src="/mrs/resources/bootstrap-table/1.8.0/bootstrap-table.min.js"></script>
+    <script src="/mrs/resources/bootstrap-table/1.8.0/locale/bootstrap-table-ko-KR.min.js"></script>
+    <script src="/mrs/resources/bootstrap3-dialog/1.34.4/js/bootstrap-dialog.min.js"></script>
+    <script src="/mrs/resources/bootstrap3-typeahead/3.1.1/bootstrap3-typeahead.min.js"></script>
+    <script src="/mrs/resources/bootstrap-tagsinput/0.5.0/bootstrap-tagsinput.min.js"></script>
+    <script src="/mrs/resources/moment/2.10.3/moment-with-locales.js"></script>
+    <script src="/mrs/resources/bootstrap-datetimepicker/4.14.30/js/bootstrap-datetimepicker.min.js"></script>
+    <script src="/mrs/resources/bootstrap-fileinput/4.2.7/js/fileinput.min.js"></script>
+    <script src="/mrs/resources/summernote/0.6.16/summernote.min.js"></script>
+    <script src="/mrs/resources/summernote/0.6.16/lang/summernote-ko-KR.js"></script>
+
+    <!-- custom resource -->
+    <link href="/mrs/resources/css/main.css" rel="stylesheet" />
+    <script src="/mrs/resources/js/util.js"></script>
+    <script src="/mrs/resources/js/vmf.js"></script>
+
+    <script>
+      var gContext = "/mrs";
+      var gProfile = {
+        accountId: "2616",
+        username: "v13205",
+        fullname: "허강주",
+        status: "11",
+        companyCode: "VT",
+        companyName: "바텍",
+        email: "kangju.heo@vatech.com",
+        phone1: "",
+        address1: "",
+      };
+
+      function isAdmin() {
+        return gProfile.status == "99";
+      }
+    </script>
+
+    <script src="/mrs/resources/js/meal.js"></script>
+    <script src="/mrs/resources/js/course.js"></script>
+
+    <title>식사 예약</title>
+    <script>
+      jQuery(document).ready(function () {
+        preventEnterSubmit();
+        updateMealList();
+      });
+
+      function updateMealList() {
+        getProgressMeal(function (obj) {
+          if (obj["result"] != "ok" && isArray(obj["data"]) == false) {
+            dialogErr(safeStr(obj["message"]));
+            return;
+          }
+
+          var html = "";
+          var mealList = obj["data"];
+
+          for (var step = 0; step < mealList.length; step++) {
+            var meal = mealList[step];
+            var title = meal["name"] || "제목없음";
+
+            html +=
+              '<div class="panel panel-default mealItem" data-meal-id="' +
+              meal["id"] +
+              '" data-max-reserv="' +
+              meal["max_reserv"] +
+              '">';
+            html +=
+              '<div class="panel-heading"><h3 class="panel-title">' +
+              title +
+              ' <span class="badge" stlye="display:none"></span> <span class="label label-default" stlye="display:none"></span></h3></div>';
+            html += '<div class="panel-body">' + meal["content"] + "</div>";
+            html += '<div class="panel-footer">';
+
+            if (isArray(meal["meal_course"]) && meal["meal_course"].length > 0) {
+              for (var step2 = 0; step2 < meal["meal_course"].length; step2++) {
+                var course = meal["meal_course"][step2];
+                html +=
+                  '<button type="button" data-course-code="' +
+                  course["code"] +
+                  '" data-max-reserv="' +
+                  course["max_reserv"] +
+                  '" style="display:none" class="mealCourse btn btn-success btn-lg btn-yes" ' +
+                  "onclick=\"reserve('" +
+                  meal["id"] +
+                  "', 'Y', '" +
+                  safeJS(course["code"]) +
+                  "', '" +
+                  safeJS(course["name"]) +
+                  "')\">" +
+                  safeTag(course["name"]) +
+                  ' <span class="badge" stlye="display:none"></span></button>&nbsp;';
+              }
+            } else {
+              html +=
+                '<button type="button" style="display:none" class="btn btn-success btn-lg btn-yes" ' +
+                "onclick=\"reserve('" +
+                meal["id"] +
+                "', 'Y')\">식사 예약</button>";
+            }
+            html +=
+              '<button type="button" style="display:none" class="btn btn-warning btn-lg btn-no" ' +
+              "onclick=\"reserve('" +
+              meal["id"] +
+              "', 'N')\">식사 안함</button>";
+            html += "</div>";
+            html += "</div>";
+          }
+
+          if (html == "") {
+            html =
+              '<div class="panel panel-default"><div class="panel-body"><h4>예약할 수 있는 식단 정보가 없습니다.</h4></div></div>';
+          }
+          jQuery("#mealList").html(html);
+
+          updateQtyStatus();
+          updateMealStatus();
+        });
+      }
+
+      function updateQtyStatus() {
+        jQuery(".mealItem").each(function (index, obj) {
+          var item = jQuery(obj);
+          var maxReserv = safeInt(item.data("max-reserv"), 0);
+          var mealId = item.data("meal-id");
+
+          var badge = item.children(".panel-heading").children("h3").find(".badge");
+          badge.hide();
+
+          if (maxReserv > 0) {
+            countMealReserv(null, mealId, null, null, function (obj) {
+              if (obj["result"] != "ok" && isArray(obj["data"]) == false) {
+                dialogErr(safeStr(obj["message"]));
+                return;
+              }
+
+              badge.text("남은수량: " + (maxReserv - safeInt(obj["data"], 0)));
+              badge.show();
+            });
+          }
+
+          item.find(".mealCourse").each(function (index, obj) {
+            var item = jQuery(obj);
+            var maxReserv = safeInt(item.data("max-reserv"), 0);
+            var badge = item.find(".badge");
+            badge.hide();
+
+            if (maxReserv > 0) {
+              var courseCode = item.data("course-code");
+
+              countMealReserv(null, mealId, null, courseCode, function (obj) {
+                if (obj["result"] != "ok" && isArray(obj["data"]) == false) {
+                  dialogErr(safeStr(obj["message"]));
+                  return;
+                }
+
+                badge.text("남은수량:" + (maxReserv - safeInt(obj["data"], 0)));
+                badge.show();
+              });
+            }
+          });
+        });
+      }
+
+      function updateMealStatus() {
+        jQuery(".mealItem").each(function (index, obj) {
+          var item = jQuery(obj);
+
+          item.removeClass(function (index, css) {
+            return (css.match(/(^|\s)panel-\S+/g) || []).join(" ");
+          });
+
+          var label = item.children(".panel-heading").children("h3").find(".label");
+          label.removeClass(function (index, css) {
+            return (css.match(/(^|\s)label-\S+/g) || []).join(" ");
+          });
+          label.hide();
+
+          selectMealReserv(gProfile.accountId, item.data("meal-id"), null, null, null, function (obj) {
+            if (obj["result"] != "ok" && isArray(obj["data"]) == false) {
+              dialogErr(safeStr(obj["message"]));
+              return;
+            }
+
+            var reserv = obj["data"][0];
+
+            item.find(".btn-yes").hide();
+            item.find(".btn-no").hide();
+
+            if (reserv == null) {
+              item.addClass("panel-default");
+              label.addClass("label-default");
+              label.text("식사안함");
+              label.show();
+              item.find(".btn-yes").show();
+            } else if (reserv["flag"] == "0") {
+              item.addClass("panel-warning");
+              label.addClass("label-warning");
+              label.text("식사안함");
+              label.show();
+              item.find(".btn-yes").show();
+            } else if (reserv["flag"] == "1") {
+              item.addClass("panel-success");
+              label.addClass("label-success");
+              var name = "식사 예약";
+
+              if (validateString(reserv["course_code"])) {
+                var course = selectCourse(reserv["course_code"]);
+                name = course["name"] + " 예약";
+              }
+              label.text(name);
+              label.show();
+              item.find(".btn-no").show();
+            }
+          });
+        });
+      }
+
+      function reserve(id, flag, courseCode, courseName) {
+        var name = "식사";
+
+        if (courseCode && courseName && courseCode != "" && courseName != "") {
+          name = courseName + " 식사";
+        }
+
+        dialogConfirm(flag == "Y" ? name + "를 예약하시겠습니까?" : "식사 예약을 취소하시겠습니까?", function (ret) {
+          if (ret != true) {
+            return;
+          }
+
+          updateMealReserv(id, flag == "Y" ? 1 : 0, courseCode || "", function (ret) {
+            updateQtyStatus();
+            updateMealStatus();
+
+            if (ret["result"] == "ok") {
+              jQuery("html, body").animate(
+                {
+                  scrollTop: jQuery('*[data-meal-id="' + id + '"]').offset().top - 55,
+                },
+                500
+              );
+
+              return;
+            }
+
+            if (typeof ret["xhr"] != "undefined") {
+              if (ret["xhr"].status == 403) {
+                location.reload();
+                return;
+              }
+              ajaxError(ret["xhr"]);
+              return;
+            }
+
+            dialogErr(safeStr(ret["message"]));
+          });
+        });
+      }
+    </script>
+  </head>
+  <body>
+    <nav class="navbar navbar-inverse navbar-fixed-top">
+      <div class="container">
+        <div class="navbar-header">
+          <button
+            type="button"
+            class="navbar-toggle collapsed"
+            data-toggle="collapse"
+            data-target="#navbar"
+            aria-expanded="false"
+            aria-controls="navbar"
+          >
+            <span class="sr-only">Toggle navigation</span> <span class="icon-bar"></span>
+            <span class="icon-bar"></span> <span class="icon-bar"></span>
+          </button>
+          <div class="navbar-brand" style="margin-top: -10px">
+            <a href="/mrs/ext"
+              ><img style="max-height: 40px; max-width: 80px" src="/mrs/resources/img/mobile_logo.png"
+            /></a>
+          </div>
+          <p class="navbar-text navbar-right visible-xs">
+            <a href="#" class="navbar-link" data-toggle="collapse" data-target="#navbar" aria-expanede="false">
+              <span id="app-title"></span> - <strong>허강주</strong>
+            </a>
+          </p>
+        </div>
+        <div id="navbar" class="collapse navbar-collapse">
+          <ul class="nav navbar-nav">
+            <li><a href="/mrs/ext/meal/reserv">식사 예약</a></li>
+            <li><a href="/mrs/ext/meal/history">식사 예약 확인</a></li>
+          </ul>
+          <ul class="nav navbar-nav navbar-right">
+            <li>
+              <form class="navbar-form">
+                <span class="text-primary"><strong>허강주</strong></span>
+                <button type="button" class="btn btn-default" onclick="callVMF('setting')">설정</button>
+                <button type="button" class="btn btn-info" onclick="location=gContext+'/profile/update';">
+                  정보수정
+                </button>
+                <button type="button" class="btn btn-warning" onclick="location=gContext+'/profile/logout';">
+                  로그아웃
+                </button>
+              </form>
+            </li>
+          </ul>
+        </div>
+        <!--/.nav-collapse -->
+      </div>
+    </nav>
+    <script>
+      // menu activate
+      jQuery(".navbar li a").each(function (index, item) {
+        var itemUrl = safeStr(jQuery(item).prop("href"), "");
+
+        if (location.href.indexOf(itemUrl) == 0) {
+          jQuery(item).parent().addClass("active");
+        }
+
+        jQuery("#app-title").text(document.title);
+      });
+    </script>
+
+    <br />
+    <div class="container">
+      <div id="mealList">
+        <div class="panel panel-default">
+          <div class="panel-body"><h4>식단 정보를 가져오고 있습니다...</h4></div>
+        </div>
+      </div>
+    </div>
+  </body>
+</html>

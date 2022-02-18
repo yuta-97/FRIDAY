@@ -1,36 +1,17 @@
-import { serverTest } from "./utils/test";
 import * as dotenv from "dotenv";
 dotenv.config();
 
-console.log(process.env.token);
-// serverTest();
+// TODO: build 시에 import error 해결하기
+import BotGenerator from "src/singleton/bot";
+import filterCommand from "src/commands";
 
-import * as TelegramBot from "node-telegram-bot-api";
+const bot = BotGenerator.getInstance();
 
-// replace the value below with the Telegram token you receive from @BotFather
-const token = process.env.token;
-
-// Create a bot that uses 'polling' to fetch new updates
-const bot = new TelegramBot(token, { polling: true });
-
-// Matches "/echo [whatever]"
-bot.onText(/\/echo (.+)/, (msg, match) => {
-  // 'msg' is the received Message from Telegram
-  // 'match' is the result of executing the regexp above on the text content
-  // of the message
-
-  const chatId = msg.chat.id;
-  const resp = match[1]; // the captured "whatever"
-
-  // send back the matched "whatever" to the chat
-  bot.sendMessage(chatId, resp);
-});
-
-// Listen for any kind of message. There are different kinds of
-// messages.
-bot.on("message", msg => {
+bot.on("message", async msg => {
   const chatId = msg.chat.id;
 
-  // send a message to the chat acknowledging receipt of their message
-  bot.sendMessage(chatId, "Received your message");
+  if (msg.text.startsWith("/")) {
+    const filteredMsg: string = await filterCommand(msg.text);
+    bot.sendMessage(chatId, filteredMsg);
+  }
 });
