@@ -1,4 +1,4 @@
-import BotGenerator from "src/singleton/bot";
+import BotGenerator from "@/singleton/bot";
 const bot = BotGenerator.getInstance();
 
 bot.onText(/\/start/, (msg, match) => {
