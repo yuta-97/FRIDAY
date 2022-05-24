@@ -18,14 +18,19 @@ export default {
   mongoPassword: process.env.MONGODB_PASSWORD,
   mongoPort: process.env.MONGODB_PORT,
   mongoUsername: process.env.MONGODB_USERNAME,
-  mongoUnifiedTopology: Boolean(process.env.MONGODB_UNIFIEDTOPOLOGY === "true"),
+  minioUrl: process.env.MINIO_URL,
+  minioPort: parseInt(process.env.MINIO_PORT, 10),
+  minioAccessKey: process.env.MINIO_ACCESS_KEY,
+  minioSecretKey: process.env.MINIO_SECRET_KEY,
+  minioBucketName: "clever",
+  isProd: Boolean(process.env.NODE_ENV !== "development"),
   logs: {
-    level: process.env.LOG_LEVEL || "silly",
+    level: process.env.LOG_LEVEL || "silly"
   },
   corsOptions: {
     origin: "*",
     credentials: true,
     methods: ["GET", "POST", "OPTIONS"],
-    allowedHeaders: ["Content-Type", "Authorization"],
-  },
+    allowedHeaders: ["Content-Type", "Authorization"]
+  }
 };

@@ -17,15 +17,16 @@ moduleAlias.addAlias("@", __dirname);
  * Main Loop here.
  */
 import "reflect-metadata"; // We need this in order to use @Decorators
-import BotGenerator from "@/singleton/bot";
-import filterCommand from "@/commands";
+import Handler from "@/commands";
+import TelegramBot from "node-telegram-bot-api";
+import { config } from "@/configs";
 
-const bot = BotGenerator.getInstance();
+const bot: TelegramBot = new TelegramBot(config.token, { polling: true });
 
-bot.on("message", async msg => {
-  const chatId = msg.chat.id;
-  if (msg.text.startsWith("/")) {
-    const filteredMsg: string = await filterCommand(msg.text);
-    bot.sendMessage(chatId, filteredMsg);
-  }
-});
+async function startServer() {
+  await require("./loaders").default();
+  await Handler(bot);
+  //
+}
+
+startServer();
