@@ -9,3 +9,12 @@ services:
       network: host
       args:
         - TARGET=develop
+  k3s:
+    image: registry.23alice.duckdns.org/friday:latest
+    build:
+      context: ./
+      dockerfile: dockerfiles/Dockerfile
+      network: host
+      args:
+        - TARGET=deploy
+  
