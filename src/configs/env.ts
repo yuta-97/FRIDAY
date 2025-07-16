@@ -1,36 +1,62 @@
-import dotenv from "dotenv";
-
 process.env.NODE_ENV = process.env.NODE_ENV || "development";
 
-const envFound = dotenv.config();
-
-if (envFound.error) {
-  throw new Error(" Could't find .env file... ");
+interface Config {
+  telegramToken: string;
+  openAiToken?: string;
+  mongodbConfig: {
+    mongoHostname: string;
+    mongoDBname: string;
+    mongoPassword: string;
+    mongoPort: string;
+    mongoUsername: string;
+  } | null;
+  minioConfig: {
+    minioUrl: string;
+    minioPort: number;
+    minioAccessKey: string;
+    minioSecretKey: string;
+  } | null;
+  isProd: boolean;
+  logs: {
+    level: string;
+  };
 }
 
-export default {
-  token: process.env.token,
-  cvauthURL: process.env.CVAUTH_URL,
-  cvauthPort: parseInt(process.env.CVAUTH_PORT),
-  cvmanagerURL: process.env.CVMANAGER_URL,
-  mongoHostname: process.env.MONGODB_HOSTNAME,
-  mongoDBname: process.env.MONGODB_DATABASE,
-  mongoPassword: process.env.MONGODB_PASSWORD,
-  mongoPort: process.env.MONGODB_PORT,
-  mongoUsername: process.env.MONGODB_USERNAME,
-  minioUrl: process.env.MINIO_URL,
-  minioPort: parseInt(process.env.MINIO_PORT, 10),
-  minioAccessKey: process.env.MINIO_ACCESS_KEY,
-  minioSecretKey: process.env.MINIO_SECRET_KEY,
-  minioBucketName: "clever",
-  isProd: Boolean(process.env.NODE_ENV !== "development"),
-  logs: {
-    level: process.env.LOG_LEVEL || "silly"
-  },
-  corsOptions: {
-    origin: "*",
-    credentials: true,
-    methods: ["GET", "POST", "OPTIONS"],
-    allowedHeaders: ["Content-Type", "Authorization"]
+function validateConfig(): Config {
+  const telegramToken = process.env.TELEGRAM_TOKEN;
+  if (!telegramToken) {
+    throw new Error("TELEGRAM_TOKEN is required");
   }
-};
+
+  const mongodbConfig = process.env.MONGODB_HOSTNAME
+    ? {
+        mongoHostname: process.env.MONGODB_HOSTNAME,
+        mongoDBname: process.env.MONGODB_DATABASE || "friday",
+        mongoPassword: process.env.MONGODB_PASSWORD || "",
+        mongoPort: process.env.MONGODB_PORT || "27017",
+        mongoUsername: process.env.MONGODB_USERNAME || ""
+      }
+    : null;
+
+  const minioConfig = process.env.MINIO_URL
+    ? {
+        minioUrl: process.env.MINIO_URL,
+        minioPort: parseInt(process.env.MINIO_PORT || "9000", 10),
+        minioAccessKey: process.env.MINIO_ACCESS_KEY || "",
+        minioSecretKey: process.env.MINIO_SECRET_KEY || ""
+      }
+    : null;
+
+  return {
+    telegramToken,
+    openAiToken: process.env.OPEN_AI_TOKEN,
+    mongodbConfig,
+    minioConfig,
+    isProd: process.env.NODE_ENV === "production",
+    logs: {
+      level: process.env.LOG_LEVEL || "info"
+    }
+  };
+}
+
+export default validateConfig();

@@ -1,20 +1,17 @@
 version: "3.4"
 
 services:
-  develop:
+  friday:
     image: registry.23alice.duckdns.org/friday:latest
     build:
       context: ./
       dockerfile: dockerfiles/Dockerfile
       network: host
-      args:
-        - TARGET=develop
-  k3s:
-    image: registry.23alice.duckdns.org/friday:latest
-    build:
-      context: ./
-      dockerfile: dockerfiles/Dockerfile
-      network: host
+      platforms:
+        - linux/amd64  # AMD64 타겟 플랫폼
       args:
         - TARGET=deploy
+      labels:
+        - "com.centurylinklabs.watchtower.enable=true"
+    restart: unless-stopped
   
