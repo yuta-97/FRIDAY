@@ -12,10 +12,9 @@ export class UserService {
 
   async createUser(userData: {
     userId: string;
-    username: string;
+    userName: string;
     chatId: string;
-    mealId?: string;
-    mealPW?: string;
+    noti?: boolean;
   }): Promise<IUserDocument> {
     try {
       const existingUser = await UserModel.findOne({
@@ -37,6 +36,18 @@ export class UserService {
     } catch (error) {
       this.logger.error({ error: error.message }, "Failed to create user");
       throw error;
+    }
+  }
+
+  async getUserById(userId: string): Promise<IUserDocument | null> {
+    try {
+      return await UserModel.findOne({ userId });
+    } catch (error) {
+      this.logger.error(
+        { error: error.message, userId },
+        "Failed to get user by ID"
+      );
+      throw new AppError("Failed to retrieve user", 500);
     }
   }
 

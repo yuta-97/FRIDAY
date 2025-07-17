@@ -3,67 +3,61 @@ import Container from "typedi";
 import { Logger } from "pino";
 import { UserService } from "@/services/UserService";
 import { handleError } from "@/utils/errorHandler";
+import { CommandRegistry } from "./base/CommandRegistry";
+import { StartCommand } from "./handlers/Start";
+import { HelpCommand } from "./handlers/Help";
+import { EchoCommand } from "./handlers/Echo";
+import { LoginCommand } from "./handlers/Login";
+import { WeatherCommand } from "./handlers/Weather";
+import { NotificationCommand } from "./handlers/Notification";
+import { userStateManager } from "@/utils/userStateManager";
+import { DiceCommand } from "./handlers/Dice";
+import { CancelCommand } from "./handlers/Cancel";
+
+// 명령어 레지스트리 초기화
+const commandRegistry = new CommandRegistry();
+const helpCommand = new HelpCommand();
+
+commandRegistry.register(new StartCommand());
+commandRegistry.register(helpCommand);
+commandRegistry.register(new EchoCommand());
+commandRegistry.register(new LoginCommand());
+commandRegistry.register(new WeatherCommand());
+commandRegistry.register(new NotificationCommand());
+commandRegistry.register(new DiceCommand());
+commandRegistry.register(new CancelCommand());
+
+// HelpCommand에 registry 설정
+helpCommand.setRegistry(commandRegistry);
 
 async function handleCommand(
   command: string,
   chatId: number,
   userId: string | undefined,
-  username: string,
-  userService: UserService
+  userName: string,
+  userService: UserService,
+  bot: TelegramBot
 ): Promise<string> {
   const data: string[] = command.split("_");
   const baseCommand = data[0];
   const value = data[1];
 
-  switch (baseCommand) {
-    case "/start":
-      if (userId) {
-        try {
-          await userService.createUser({
-            userId,
-            username,
-            chatId: chatId.toString()
-          });
-          return `안녕하세요 ${username}님! 환영합니다! 🎉`;
-        } catch (error) {
-          return `안녕하세요 ${username}님! 다시 만나서 반갑습니다! 😊`;
-        }
-      }
-      return "사용자 정보를 가져올 수 없습니다.";
-
-    case "/help":
-      return `
-📖 도움말
-/start - 시작하기
-/help - 도움말 보기
-/echo - 메시지 반복
-/login - 로그인
-      `.trim();
-
-    case "/echo":
-      return value
-        ? `Echo: ${value}`
-        : "메시지를 입력해주세요. 예: /echo_안녕하세요";
-
-    case "/login":
-      return "로그인 기능을 준비 중입니다... 🔧";
-
-    default:
-      return `알 수 없는 명령어입니다: ${baseCommand}\n/help 명령어로 도움말을 확인해주세요.`;
-  }
+  return commandRegistry.execute(baseCommand, {
+    value,
+    chatId,
+    userId,
+    userName,
+    userService,
+    bot
+  });
 }
 
 export default async function Handler(bot: TelegramBot) {
   const logger: Logger = Container.get("logger");
   const userService: UserService = Container.get("userService");
 
-  // 봇 명령어 설정
-  bot.setMyCommands([
-    { command: "start", description: "시작하기" },
-    { command: "help", description: "도움말" },
-    { command: "echo", description: "메시지 반복" },
-    { command: "login", description: "로그인" }
-  ]);
+  // 봇 명령어 설정 (동적으로 생성)
+  bot.setMyCommands(commandRegistry.getCommandsForBot());
 
   // 챗 멤버 변경 리스너
   bot.addListener("chat_member", (member: TelegramBot.ChatMemberUpdated) => {
@@ -76,13 +70,13 @@ export default async function Handler(bot: TelegramBot) {
 
     const chatId = msg.chat.id;
     const userId = msg.from?.id?.toString();
-    const username = msg.from?.username || msg.from?.first_name || "Unknown";
+    const userName = msg.from?.username || msg.from?.first_name || "Unknown";
 
     logger.info(
       {
         chatId,
         userId,
-        username,
+        userName,
         messageText: msg.text.substring(0, 100) // 로그에서 메시지 길이 제한
       },
       "Message received"
@@ -90,14 +84,36 @@ export default async function Handler(bot: TelegramBot) {
 
     try {
       if (msg.text.startsWith("/")) {
+        // 명령어 처리
         const response = await handleCommand(
           msg.text,
           chatId,
           userId,
-          username,
-          userService
+          userName,
+          userService,
+          bot
         );
         await bot.sendMessage(chatId, response);
+      } else {
+        // 일반 텍스트 메시지 처리 (사용자 상태 확인)
+        const userState = userStateManager.getUserState(userId || "", chatId);
+
+        if (userState) {
+          // 현재 진행 중인 명령어가 있는 경우
+          const commandWithValue = `${userState.currentCommand}_${msg.text}`;
+          const response = await handleCommand(
+            commandWithValue,
+            chatId,
+            userId,
+            userName,
+            userService,
+            bot
+          );
+          if (response) {
+            await bot.sendMessage(chatId, response);
+          }
+        }
+        // 상태가 없는 일반 메시지는 무시
       }
     } catch (error) {
       logger.error(
@@ -109,6 +125,70 @@ export default async function Handler(bot: TelegramBot) {
         "죄송합니다. 오류가 발생했습니다. 다시 시도해주세요."
       );
       handleError(error instanceof Error ? error : new Error(String(error)));
+    }
+  });
+
+  // 인라인 키보드 버튼 클릭 처리
+  bot.on("callback_query", async callbackQuery => {
+    const msg = callbackQuery.message;
+    const data = callbackQuery.data;
+
+    if (!msg || !data) return;
+
+    const chatId = msg.chat.id;
+    const userId = callbackQuery.from.id.toString();
+    const userName =
+      callbackQuery.from.username || callbackQuery.from.first_name || "Unknown";
+
+    try {
+      // 콜백 쿼리에 응답 (로딩 상태 해제)
+      await bot.answerCallbackQuery(callbackQuery.id);
+
+      // 날씨 도시 선택 콜백 처리
+      if (data.startsWith("weather_select_")) {
+        const selectedIndex = parseInt(data.replace("weather_select_", ""));
+
+        // 사용자 상태 확인
+        const userState = userStateManager.getUserState(userId, chatId);
+        if (
+          userState &&
+          userState.currentCommand === "/weather" &&
+          userState.step === 2
+        ) {
+          // 도시 선택 처리
+          const commandWithValue = `/weather_${selectedIndex + 1}`;
+          const response = await handleCommand(
+            commandWithValue,
+            chatId,
+            userId,
+            userName,
+            userService,
+            bot
+          );
+
+          // 기존 메시지 수정
+          await bot.editMessageText(response, {
+            chat_id: chatId,
+            message_id: msg.message_id,
+            parse_mode: "HTML"
+          });
+        } else {
+          // 상태가 없거나 잘못된 경우
+          await bot.answerCallbackQuery(callbackQuery.id, {
+            text: "세션이 만료되었습니다. 다시 /weather 명령어를 사용해주세요.",
+            show_alert: true
+          });
+        }
+      }
+    } catch (error) {
+      logger.error(
+        { error: error.message, chatId },
+        "Error processing callback query"
+      );
+      await bot.answerCallbackQuery(callbackQuery.id, {
+        text: "오류가 발생했습니다. 다시 시도해주세요.",
+        show_alert: true
+      });
     }
   });
 

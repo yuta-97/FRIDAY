@@ -3,6 +3,7 @@ process.env.NODE_ENV = process.env.NODE_ENV || "development";
 interface Config {
   telegramToken: string;
   openAiToken?: string;
+  openWeatherApiKey?: string;
   mongodbConfig: {
     mongoHostname: string;
     mongoDBname: string;
@@ -50,6 +51,7 @@ function validateConfig(): Config {
   return {
     telegramToken,
     openAiToken: process.env.OPEN_AI_TOKEN,
+    openWeatherApiKey: process.env.OPENWEATHER_API_KEY,
     mongodbConfig,
     minioConfig,
     isProd: process.env.NODE_ENV === "production",

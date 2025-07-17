@@ -2,10 +2,9 @@ import mongoose, { Document, Schema } from "mongoose";
 
 export interface IUser {
   userId: string;
-  username: string;
+  userName: string;
   chatId: string;
-  mealId: string;
-  mealPW: string;
+  noti: boolean;
 }
 
 export interface IUserDocument extends Omit<IUser, "id">, Document {
@@ -15,11 +14,10 @@ export interface IUserDocument extends Omit<IUser, "id">, Document {
 
 const UserSchema: Schema = new Schema(
   {
-    userId: { type: String, required: true, index: true, unique: true },
-    username: { type: String, required: true },
+    userId: { type: String, required: true, unique: true },
+    userName: { type: String, required: true },
     chatId: { type: String, required: true },
-    mealId: { type: String, required: false },
-    mealPW: { type: String, required: false }
+    noti: { type: Boolean, required: false, default: false }
   },
   {
     timestamps: true,
@@ -28,8 +26,8 @@ const UserSchema: Schema = new Schema(
 );
 
 // 인덱스 추가
-UserSchema.index({ chatId: 1 });
-UserSchema.index({ username: 1 });
+UserSchema.index({ userId: 1 });
+UserSchema.index({ userName: 1 });
 
 export const UserModel = mongoose.model<IUserDocument>("User", UserSchema);
 
