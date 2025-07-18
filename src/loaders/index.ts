@@ -1,6 +1,7 @@
 import { config } from "@/configs";
 import databaseLoader from "./databaseLoader";
 import dependencyInjectorLoader from "./dependencyInjector";
+import rssLoader from "./rssLoader";
 import Logger from "./pinoLoader";
 
 export default async function () {
@@ -9,9 +10,15 @@ export default async function () {
       await databaseLoader();
       Logger.info("✅ DB loaded and connected!");
       await dependencyInjectorLoader({
-        // TODO: 필요한 스키마 추가할 것.
-        models: [require("../models/User").default]
+        models: [
+          require("../models/User").default,
+          require("../models/RSSFeed").default,
+          require("../models/RSSArticle").default
+        ]
       });
+
+      // RSS 로더 시작
+      await rssLoader();
     } else {
       Logger.info("⚠️  MongoDB not configured, running without database");
       await dependencyInjectorLoader({

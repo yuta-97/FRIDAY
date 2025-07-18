@@ -10,6 +10,7 @@ import { EchoCommand } from "./handlers/Echo";
 import { LoginCommand } from "./handlers/Login";
 import { WeatherCommand } from "./handlers/Weather";
 import { NotificationCommand } from "./handlers/Notification";
+import { RssCommand } from "./handlers/Rss";
 import { userStateManager } from "@/utils/userStateManager";
 import { DiceCommand } from "./handlers/Dice";
 import { CancelCommand } from "./handlers/Cancel";
@@ -24,6 +25,7 @@ commandRegistry.register(new EchoCommand());
 commandRegistry.register(new LoginCommand());
 commandRegistry.register(new WeatherCommand());
 commandRegistry.register(new NotificationCommand());
+commandRegistry.register(new RssCommand());
 commandRegistry.register(new DiceCommand());
 commandRegistry.register(new CancelCommand());
 

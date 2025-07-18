@@ -9,8 +9,6 @@ services:
       network: host
       platforms:
         - linux/amd64  # AMD64 타겟 플랫폼
-      args:
-        - TARGET=deploy
       labels:
         - "com.centurylinklabs.watchtower.enable=true"
     restart: unless-stopped

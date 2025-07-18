@@ -1,15 +1,8 @@
-import { Container } from "typedi";
-import { Logger } from "pino";
 import { UserModel, IUserDocument } from "@/models/User";
 import { AppError } from "@/utils/errorHandler";
+import Logger from "@/loaders/pinoLoader";
 
 export class UserService {
-  private logger: Logger;
-
-  constructor() {
-    this.logger = Container.get("logger");
-  }
-
   async createUser(userData: {
     userId: string;
     userName: string;
@@ -28,13 +21,10 @@ export class UserService {
       const user = new UserModel(userData);
       await user.save();
 
-      this.logger.info(
-        { userId: userData.userId },
-        "User created successfully"
-      );
+      Logger.info({ userId: userData.userId }, "User created successfully");
       return user;
     } catch (error) {
-      this.logger.error({ error: error.message }, "Failed to create user");
+      Logger.error({ error: error.message }, "Failed to create user");
       throw error;
     }
   }
@@ -43,7 +33,7 @@ export class UserService {
     try {
       return await UserModel.findOne({ userId });
     } catch (error) {
-      this.logger.error(
+      Logger.error(
         { error: error.message, userId },
         "Failed to get user by ID"
       );
@@ -55,7 +45,7 @@ export class UserService {
     try {
       return await UserModel.findOne({ chatId });
     } catch (error) {
-      this.logger.error(
+      Logger.error(
         { error: error.message, chatId },
         "Failed to get user by chat ID"
       );
@@ -77,13 +67,10 @@ export class UserService {
         throw new AppError("User not found", 404);
       }
 
-      this.logger.info({ userId }, "User updated successfully");
+      Logger.info({ userId }, "User updated successfully");
       return user;
     } catch (error) {
-      this.logger.error(
-        { error: error.message, userId },
-        "Failed to update user"
-      );
+      Logger.error({ error: error.message, userId }, "Failed to update user");
       throw error;
     }
   }
@@ -96,14 +83,23 @@ export class UserService {
         throw new AppError("User not found", 404);
       }
 
-      this.logger.info({ userId }, "User deleted successfully");
+      Logger.info({ userId }, "User deleted successfully");
       return true;
     } catch (error) {
-      this.logger.error(
-        { error: error.message, userId },
-        "Failed to delete user"
-      );
+      Logger.error({ error: error.message, userId }, "Failed to delete user");
       throw error;
+    }
+  }
+
+  async getUsersWithNotification(): Promise<IUserDocument[]> {
+    try {
+      return await UserModel.find({ noti: true });
+    } catch (error) {
+      Logger.error(
+        { error: error.message },
+        "Failed to get users with notification"
+      );
+      throw new AppError("Failed to retrieve notification users", 500);
     }
   }
 }

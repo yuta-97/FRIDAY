@@ -1,7 +1,6 @@
 # 멀티 스테이지 빌드로 이미지 크기 최적화
 # build stage
 FROM node:20-alpine AS build
-ARG TARGET
 
 # Alpine 최적화
 RUN apk add --no-cache python3 make g++
@@ -19,7 +18,7 @@ RUN corepack enable pnpm && \
 COPY . .
 
 # 빌드 실행
-RUN pnpm run build:${TARGET}
+RUN pnpm run build:deploy
 
 # 프로덕션 의존성만 재설치 (빌드 후 dev 의존성 제거)
 RUN rm -rf node_modules && \
